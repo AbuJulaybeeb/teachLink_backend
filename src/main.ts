@@ -1,3 +1,4 @@
+import { bootstrapTracing } from './observability/tracing/tracing.bootstrap';
 import { NestFactory } from '@nestjs/core';
 import {
   ValidationPipe,
@@ -35,6 +36,7 @@ import { createAuditLoggerMiddleware } from './middleware/audit/audit-logger.mid
 
 // GLOBAL ENFORCEMENT IMPORT (IMPORTANT FOR YOUR TASK)
 import { LocaleInterceptor } from './common/interceptors/locale.interceptor';
+import { TracingInterceptor } from './observability/tracing/tracing.interceptor';
 
 const API_VERSION_HEADER = 'X-API-Version';
 const DEFAULT_API_VERSION = '1';
@@ -264,10 +266,11 @@ async function bootstrapWorker(): Promise<void> {
   );
 
   // =========================
-  // GLOBAL TIMEZONE + LOCALE ENFORCEMENT (IMPORTANT FIX)
+  // GLOBAL TIMEZONE + LOCALE ENFORCEMENT (IMPORTANT FIX) & TRACING
   // =========================
   app.useGlobalInterceptors(
     new LocaleInterceptor(),
+    new TracingInterceptor(),
   );
 
   // =========================
@@ -353,6 +356,9 @@ async function bootstrapWorker(): Promise<void> {
 }
 
 async function bootstrap(): Promise<void> {
+  // MUST initialize tracing before NestJS modules
+  await bootstrapTracing();
+
   const logger = new Logger('Cluster');
   const clusterModeEnabled = (process.env.CLUSTER_MODE || 'false') === 'true';
 
